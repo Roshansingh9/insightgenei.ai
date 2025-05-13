@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Query
-from index import result
+from src.index import result
 
 app = FastAPI()
 

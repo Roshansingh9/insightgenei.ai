@@ -1,8 +1,8 @@
 import json
-from utils.language import detect_language, translate_language
-from utils.generate_query import generate_query 
-from utils.execute_query import execute_sql_query  
-from utils.explain_query_result import explain_query_response  
+from src.utils.language import detect_language, translate_language
+from src.utils.generate_query import generate_query 
+from src.utils.execute_query import execute_sql_query  
+from src.utils.explain_query_result import explain_query_response  
 def result(text):
     
     lang = detect_language(text)
