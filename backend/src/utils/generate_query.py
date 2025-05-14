@@ -41,12 +41,33 @@ prompt = ChatPromptTemplate.from_template(
     Using the table `car_sales` with the following columns:
     {columns}
 
-    Convert the following natural language question into a valid SQLite SQL query.
-    Only return the SQL query without explanation.
+    Convert the following natural language question into a valid PostgreSQL SQL query.
+    Return ONLY the SQL query without ANY explanation or markdown formatting.
+    Make sure the query syntax is 100% valid for PostgreSQL.
+    DO NOT include <think> tags or any explanations of your thought process.
+    ONLY return the SQL query text.
 
     Question: {input}
     """
 )
+
+
+def extract_sql_query(response_text):
+    
+    clean_text = re.sub(r'```sql|```', '', response_text, flags=re.IGNORECASE)
+    
+    # Remove any <think> blocks
+    clean_text = re.sub(r'<think>.*?</think>', '', clean_text, flags=re.DOTALL)
+    
+    # Get the actual query - typically the last part after any explanations
+    lines = [line for line in clean_text.strip().split('\n') if line.strip()]
+    if lines:
+        # Take the last non-empty line as the query if there are multiple lines
+        sql_query = lines[-1].strip()
+    else:
+        sql_query = clean_text.strip()
+        
+    return sql_query
 
 
 def generate_sql(user_input):
@@ -56,23 +77,22 @@ def generate_sql(user_input):
         input=user_input
     )
     response = llm.invoke(formatted_prompt)
-    return response.content.strip()
+    raw_response = response.content.strip()
+    
+    print("Raw LLM Response:", raw_response)
+    
+    # Extract the actual SQL query
+    sql_query = extract_sql_query(raw_response)
+    
+    return sql_query
 
 
 def generate_query(user_input):
     sql_query = generate_sql(user_input)
     
     
-    match = re.search(r'</think>(.*?)<think>', sql_query, re.DOTALL)
-
-    if match:
-        content_after_think = match.group(1).strip()  # Extract content between </think> tags
-    else:
-        content_after_think = "No detailed explanation available."
-
-    
     response_json = {
-        "detail": content_after_think,
-        "sql_query": sql_query.split("\n")[-1].strip()  # Get the actual SQL query from the last line
+        "detail": "Query generated successfully",
+        "sql_query": sql_query
     }
     return json.dumps(response_json, indent=4)
