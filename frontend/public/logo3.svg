@@ -1,0 +1,11 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gradient3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0d9488" />
+      <stop offset="100%" stop-color="#2563eb" />
+    </linearGradient>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="#0a0a0a" />
+  <circle cx="100" cy="100" r="80" fill="#171717" />
+  <polygon points="100,50 135,125 65,125" fill="url(#gradient3)" />
+</svg>
