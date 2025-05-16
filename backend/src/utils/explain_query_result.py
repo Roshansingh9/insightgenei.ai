@@ -103,25 +103,34 @@ def explain_query_response(json_input: str) -> str:
         llm_response = llm.invoke(formatted).content.strip()
         logger.info(f"LLM response received: {llm_response[:100]}...")  # Log first 100 chars
         
-        # Clean up the response by removing markdown code blocks if present
+        # Clean up markdown (just in case)
         llm_response = re.sub(r"^```[\s\S]*?\n", "", llm_response)
         llm_response = re.sub(r"\n```$", "", llm_response)
         
-        # Create the output
         output = {
             "data": data_obj,
             "summary": llm_response,
             "error": "error" in explanation.lower() or len(data_obj) == 0
         }
-        
         logger.info("Query explanation completed successfully")
         return json.dumps(output, indent=4)
         
     except Exception as e:
-        logger.error(f"Error in explain_query_response: {str(e)}", exc_info=True)
-        output = {
+        err_msg = str(e)
+        logger.error(f"Error in explain_query_response: {err_msg}", exc_info=True)
+        
+        # Handle token size error (413) from Groq
+        if "Request too large for model" in err_msg or "413" in err_msg:
+            logger.warning("Token limit exceeded; returning fallback summary")
+            return json.dumps({
+                "data": parsed.get("data", []),
+                "summary": None,
+                "error": True
+            }, indent=4)
+        
+        # General error fallback
+        return json.dumps({
             "data": [],
-            "summary": f"An error occurred while generating the explanation: {str(e)}",
+            "summary": f"An error occurred while generating the explanation: {err_msg}",
             "error": True
-        }
-        return json.dumps(output, indent=4)
+        }, indent=4)
