@@ -1,15 +1,15 @@
-# 🏍️ InsightGenEI.ai
+# 🏍️ InsightGenei.ai(https://insightgenei-ai.vercel.app/)
 
 **Transform your thoughts into insights with natural language!**
 
-![InsightGenEI.ai](./frontend/src/assets/cover.png)
+![InsightGenei.ai](./frontend/src/assets/cover.png)
 
 ---
 
 
 ## ✨ Intro
 
-**InsightGeneI.ai** is a cutting-edge full-stack application that revolutionizes how users interact with data. Speak to your database in plain English and get beautiful, insightful results instantly!
+**InsightGenei.ai** is a cutting-edge full-stack application that revolutionizes how users interact with data. Speak to your database in plain English and get beautiful, insightful results instantly!
 
 This intelligent system processes natural language queries about Indian motorcycle sales data, translates them into precise SQL commands, and delivers both raw data and AI-generated insights.
 
