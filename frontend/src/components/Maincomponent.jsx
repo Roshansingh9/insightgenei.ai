@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { motion } from "framer-motion";
 
 export default function QueryInterface() {
   const [query, setQuery] = useState("");
@@ -143,13 +144,15 @@ export default function QueryInterface() {
             onChange={(e) => setQuery(e.target.value)}
           />
 
-          <button
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.8 }}
             onClick={handleSubmit}
             disabled={loading}
             className="mt-4 px-6 py-3 bg-gradient-to-r from-teal-600 to-blue-600 rounded-md font-medium text-white hover:from-teal-500 hover:to-blue-500 transition-colors disabled:opacity-50"
           >
             {loading ? "Processing..." : "Submit"}
-          </button>
+          </motion.button>
         </section>
 
         {/* PART 2: Response Display Section */}

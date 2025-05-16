@@ -1,6 +1,8 @@
 import  { useState } from "react";
 import Button from "./Button/Button";
-import InfoModal from "./Button/Button_navigation"; // Your modal component
+import InfoModal from "./Button/Button_navigation"; 
+import logo from "../assets/logo-design.svg";
+
 
 const Header = () => {
   const [showModal, setShowModal] = useState(false);
