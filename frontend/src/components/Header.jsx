@@ -28,7 +28,7 @@ const Header = () => {
               openModal(
                 "How to use this AI Platform",
                 `1. Ask questions naturally:
-              No need to know SQL — just type your query in any language (we support all languages!). For example, “What’s the average resale price for SUVs in Tier 1 cities?”
+              No need to know SQL — just type your query in any language (we support all languages!). For example, “Which brand has the highest average resale value?”
               
               2. Instant answers:
               Our AI converts your question into a database query and fetches accurate, up-to-date results instantly.
