@@ -12,27 +12,9 @@ groq_api_key = os.getenv("GROQ_API_KEY")
 
 llm = ChatGroq(
     groq_api_key=groq_api_key,
-    model_name="deepseek-r1-distill-llama-70b"
+    model_name="deepseek-r1-distill-llama-70b",
+    temperature=0.0  # Set temperature to 0 for more deterministic outputs
 )
-
-
-column_mapping = {
-    "State": "state",
-    "Avg Daily Distance (km)": "avg_daily_distance_km",
-    "Brand": "brand",
-    "Model": "model",
-    "Price (INR)": "price_inr",
-    "Year of Manufacture": "year_of_manufacture",
-    "Engine Capacity (cc)": "engine_capacity_cc",
-    "Fuel Type": "fuel_type",
-    "Mileage (km/l)": "mileage_kmpl",
-    "Owner Type": "owner_type",
-    "Registration Year": "registration_year",
-    "Insurance Status": "insurance_status",
-    "Seller Type": "seller_type",
-    "Resale Price (INR)": "resale_price_inr",
-    "City Tier": "city_tier"
-}
 
 
 # Sample data types and constraints for better schema understanding
@@ -55,18 +37,6 @@ column_details = {
 }
 
 
-# Create example data for the LLM to understand the data better
-example_data = """
-| state      | brand  | model      | price_inr | engine_capacity_cc | fuel_type | city_tier |
-|------------|--------|------------|-----------|-------------------|-----------|-----------|
-| Maharashtra| Honda  | Activa     | 75000     | 110               | Petrol    | 1         |
-| Karnataka  | Bajaj  | Pulsar     | 120000    | 150               | Petrol    | 1         |
-| Tamil Nadu | TVS    | Jupiter    | 70000     | 110               | Petrol    | 2         |
-| Delhi      | Hero   | Splendor   | 65000     | 100               | Petrol    | 1         |
-| Rajasthan  | Royal Enfield | Classic | 180000 | 350              | Petrol    | 2         |
-"""
-
-
 # Example queries and their corresponding SQL to guide the model
 example_queries = """
 Example 1:
@@ -87,76 +57,87 @@ SQL: SELECT state, model, COUNT(*) AS count FROM Motorcycle_sales GROUP BY state
 
 Example 5:
 Question: Compare the average mileage between motorcycles manufactured before 2020 and those manufactured in or after 2020
-SQL: 
-SELECT 
-    CASE WHEN year_of_manufacture < 2020 THEN 'Before 2020' ELSE '2020 and After' END AS manufacture_period,
-    AVG(mileage_kmpl) AS avg_mileage
-FROM Motorcycle_sales
-GROUP BY manufacture_period
-ORDER BY manufacture_period;
+SQL: SELECT CASE WHEN year_of_manufacture < 2020 THEN 'Before 2020' ELSE '2020 and After' END AS manufacture_period, AVG(mileage_kmpl) AS avg_mileage FROM Motorcycle_sales GROUP BY manufacture_period ORDER BY manufacture_period;
 """
 
 
-# Improved prompt with clearer instructions and examples
+# Completely revamped prompt with extremely strict instructions
 prompt = ChatPromptTemplate.from_template(
     """
-    You are an expert PostgreSQL database administrator specializing in SQL query generation.
+    You will generate ONLY a PostgreSQL SQL query based on the natural language question below.
     
-    # DATABASE SCHEMA
     Table name: Motorcycle_sales
+    Columns: {column_details}
     
-    ## Columns with data types and descriptions:
-    {column_details}
+    EXTREMELY IMPORTANT INSTRUCTIONS:
+    1. Your ENTIRE response must be ONLY the SQL query - nothing else
+    2. Do NOT include any explanations before or after the query
+    3. Do NOT use <think> tags, internal monologue, or explain your reasoning AT ALL
+    4. Do NOT include markdown code blocks (```sql```)
+    5. Start your response with SELECT, WITH, or other SQL keyword
+    6. End your query with a semicolon
+    7. Include necessary WHERE, GROUP BY, HAVING, ORDER BY clauses as needed
+    8. Your response should be PURE SQL ONLY with no commentary
     
-    ## Sample data to understand the content:
-    {example_data}
-    
-    # TASK
-    Convert the following natural language question into a precise, optimized PostgreSQL SQL query.
-    
-    # REQUIREMENTS
-    - Your response must ONLY contain the SQL query without explanation, comments, or markdown formatting
-    - Use proper PostgreSQL syntax, including correct functions and operators
-    - Return comprehensive column selections when appropriate (avoid SELECT * except where truly needed)
-    - Include appropriate aliasing for clarity in complex queries
-    - Use appropriate JOIN operations where needed
-    - Implement proper filtering with WHERE clauses
-    - Use aggregate functions (AVG, COUNT, SUM, MIN, MAX) appropriately
-    - Include GROUP BY, HAVING, ORDER BY clauses as needed
-    - For complex queries, use CTEs (WITH clause) or subqueries for better readability
-    - Handle potential NULL values properly
-    - Implement window functions for advanced analytics when appropriate
-    - Write queries that are performant and follow best practices
-
-    # EXAMPLES OF QUESTIONS AND CORRESPONDING SQL QUERIES:
+    Examples of correct responses:
     {example_queries}
     
-    # INSTRUCTIONS
-    Answer with ONLY the SQL query. No explanations, no markdown, no code blocks, no preamble.
-    
-    # USER QUESTION
+    Converting this question to SQL ONLY:
     {input}
     """
 )
 
 
 def extract_sql_query(response_text):
-    # Remove SQL code blocks if present
-    clean_text = re.sub(r'```sql|```', '', response_text, flags=re.IGNORECASE)
+    """
+    Extract only the SQL query from the LLM response.
+    This function is significantly improved to handle cases where the LLM provides
+    thinking or explanations along with the SQL query.
+    """
+    # First, try to remove any think tags and their content
+    clean_text = re.sub(r'<think>[\s\S]*?</think>', '', response_text, re.DOTALL)
     
-    # Remove any remaining explanations or thoughts
-    clean_text = re.sub(r'<think>.*?</think>', '', clean_text, flags=re.DOTALL)
+    # Also look for incomplete think tags or other reasoning blocks
+    clean_text = re.sub(r'Alternatively,.*?\.', '', clean_text, re.DOTALL)
+    clean_text = re.sub(r'Yes, because.*?\.', '', clean_text, re.DOTALL)
+    clean_text = re.sub(r'So, the query should be.*?\.', '', clean_text, re.DOTALL)
     
-    # Remove any other markdown formatting that might be present
-    clean_text = re.sub(r'^SELECT', 'SELECT', clean_text, flags=re.MULTILINE)
+    # Remove code block formatting
+    clean_text = re.sub(r'```sql|```', '', clean_text, re.IGNORECASE)
     
-    # Remove any prefixes like "SQL:" or "Query:"
-    clean_text = re.sub(r'^(SQL:|Query:)\s*', '', clean_text, flags=re.IGNORECASE)
+    # Find SQL query pattern - most SQL queries start with SELECT, WITH, etc.
+    # and typically end with a semicolon
+    sql_pattern = r'((?:SELECT|WITH|CREATE|INSERT|UPDATE|DELETE|ALTER)[\s\S]*?;)'
+    matches = re.findall(sql_pattern, clean_text, re.IGNORECASE)
     
-    # Clean up extra whitespace
-    clean_text = clean_text.strip()
+    if matches:
+        # Return the last complete SQL statement
+        return matches[-1].strip()
     
-    return clean_text
+    # If no complete SQL found, look for partial SQL
+    partial_sql_pattern = r'((?:SELECT|WITH)[\s\S]*)'
+    partial_matches = re.findall(partial_sql_pattern, clean_text, re.IGNORECASE)
+    
+    if partial_matches:
+        sql = partial_matches[-1].strip()
+        # Add semicolon if missing
+        if not sql.endswith(';'):
+            sql += ';'
+        return sql
+    
+    # Last resort: if the text contains SELECT or similar keywords, 
+    # try to extract everything from there to the end
+    for keyword in ['SELECT', 'WITH', 'CREATE', 'INSERT', 'UPDATE', 'DELETE', 'ALTER']:
+        if keyword in clean_text:
+            parts = clean_text.split(keyword, 1)
+            if len(parts) > 1:
+                sql = keyword + parts[1].strip()
+                if not sql.endswith(';'):
+                    sql += ';'
+                return sql
+    
+    # If all else fails, just return the cleaned text
+    return clean_text.strip()
 
 
 def generate_sql(user_input):
@@ -166,7 +147,6 @@ def generate_sql(user_input):
     # Format the prompt with all the details
     formatted_prompt = prompt.format_messages(
         column_details=column_detail_str,
-        example_data=example_data,
         example_queries=example_queries,
         input=user_input
     )
@@ -175,17 +155,58 @@ def generate_sql(user_input):
     response = llm.invoke(formatted_prompt)
     raw_response = response.content.strip()
     
-    # For debugging
-    print("Raw LLM Response:", raw_response)
+    # Debug prints should be commented out in production
+    # print("Raw LLM Response:", raw_response)
     
     # Extract the actual SQL query
     sql_query = extract_sql_query(raw_response)
     
+    # Ensure the query ends with a semicolon
+    if not sql_query.endswith(';'):
+        sql_query = sql_query.rstrip() + ';'
+    
     return sql_query
+
+
+def post_process_sql_query(sql_query):
+    """
+    Additional post-processing to clean up any remaining non-SQL content
+    """
+    # Remove any obvious non-SQL content
+    non_sql_patterns = [
+        r'I should.*?\.', 
+        r'Finally,.*?\.', 
+        r'This query.*?\.', 
+        r'Let me.*?\.', 
+        r'Now.*?\.', 
+        r'Here\'s.*?:',
+        r'Alternatively,.*?\.',
+        r'Yes, because.*?\.',
+        r'So, the query should be.*?\.',
+        r'.*\n</think>\n',  # Handle incomplete think tags
+        r'</?think>'  # Remove any remaining think tags without content
+    ]
+    
+    clean_query = sql_query
+    for pattern in non_sql_patterns:
+        clean_query = re.sub(pattern, '', clean_query, flags=re.IGNORECASE | re.DOTALL)
+    
+    # If we have a semicolon in the middle, keep only up to the first semicolon
+    if ';' in clean_query:
+        parts = clean_query.split(';')
+        clean_query = parts[0] + ';'
+    
+    # Final cleanup of any whitespace issues
+    clean_query = clean_query.strip()
+    
+    return clean_query
 
 
 def generate_query(user_input):
     sql_query = generate_sql(user_input)
+    
+    # Additional post-processing
+    sql_query = post_process_sql_query(sql_query)
     
     # Return the result
     response_json = {
@@ -195,9 +216,3 @@ def generate_query(user_input):
     return json.dumps(response_json, indent=4)
 
 
-# Example usage
-if __name__ == "__main__":
-    # Test with a complex query
-    user_query = "What's the average resale price difference between first and second owners for motorcycles with engine capacity over 150cc, grouped by brand, and only include brands with at least 5 motorcycles?"
-    result = generate_query(user_query)
-    print(result)
