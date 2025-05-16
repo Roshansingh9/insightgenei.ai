@@ -27,7 +27,7 @@ function CustomFooter() {
           <motion.a
             whileHover={{ scale: 1.4 }}
             whileTap={{ scale: 1.0 }}
-            href="https://github.com/Roshansingh9"
+            href="https://github.com/Roshansingh9/insightgenei.ai"
             target="_blank"
             rel="noopener noreferrer"
             className="text-[#2563eb] hover:text-[#ffffff]"
