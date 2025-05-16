@@ -39,6 +39,6 @@ df.rename(columns=column_mapping, inplace=True)
 engine = create_engine(DATABASE_URL)
 
 # This will create or replace a table called 'car_sales'
-df.to_sql("car_sales", engine, if_exists="replace", index=False)
+df.to_sql("Motorcycle_sales", engine, if_exists="replace", index=False)
 
 print(" CSV data uploaded to PostgreSQL successfully.")

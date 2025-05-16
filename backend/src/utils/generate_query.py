@@ -38,7 +38,7 @@ column_mapping = {
 prompt = ChatPromptTemplate.from_template(
     """
     You are an expert SQL assistant.
-    Using the table `car_sales` with the following columns:
+    Using the table `Motorcycle_sales` with the following columns:
     {columns}
 
     Convert the following natural language question into a valid PostgreSQL SQL query.
