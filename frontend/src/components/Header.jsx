@@ -1,7 +1,7 @@
 import  { useState } from "react";
 import Button from "./Button/Button";
 import InfoModal from "./Button/Button_navigation"; 
-import logo from "../assets/logo-design.svg";
+
 
 
 const Header = () => {
@@ -19,7 +19,7 @@ const Header = () => {
   return (
     <header className="fixed top-0 left-0 w-full bg-gradient-to-r from-black via-gray-900 to-black text-white shadow-md z-50">
       <div className="max-w-screen-xl mx-auto flex items-center justify-between px-6 py-4">
-        <img src="src/assets/logo-design.svg" alt="logo" className="h-10" />
+        <img src="/logo-design.svg" alt="logo" className="h-10" />
 
         <div className="flex space-x-4">
           <Button
